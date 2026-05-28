@@ -2,7 +2,6 @@
   <div class="page">
     <h2>Catálogo de Productos</h2>
     
-    <!-- BUSCADOR EN TIEMPO REAL -->
     <div class="search-box">
       <input type="text" v-model="busqueda" placeholder="🔍 Buscar producto por nombre..." />
     </div>
@@ -12,9 +11,22 @@
         <h3>{{ p.nombre }}</h3>
         <p class="precio">${{ p.precio }}</p>
         <p class="stock">Disponibles: {{ p.stock }} pzas</p>
+        
+        <button @click="carrito.agregar(p)" class="btn-agregar">
+          <template v-if="carrito.cantidadDeProducto(p.id) > 0">
+            🛒 En carrito ({{ carrito.cantidadDeProducto(p.id) }})
+          </template>
+          <template v-else>
+            ➕ Agregar al carrito
+          </template>
+        </button>
+
         <router-link :to="'/catalogo/' + p.id" class="btn-detalle">Ver Detalles</router-link>
       </div>
-      <p v-if="productosFiltrados.length === 0" style="grid-column: 1/-1;">No se encontraron productos que coincidan.</p>
+      
+      <p v-if="productosFiltrados.length === 0" style="grid-column: 1/-1;">
+        No se encontraron productos que coincidan.
+      </p>
     </div>
   </div>
 </template>
@@ -22,11 +34,13 @@
 <script>
 import { ref, onMounted, computed } from 'vue'
 import axios from 'axios'
+import { useCarritoStore } from '../stores/carrito' // Importamos el store del carrito
 
 export default {
   setup() {
     const productos = ref([])
     const busqueda = ref('')
+    const carrito = useCarritoStore() // Activamos el store para usar sus acciones y getters
 
     const cargarProductos = async () => {
       try {
@@ -45,7 +59,7 @@ export default {
 
     onMounted(cargarProductos)
 
-    return { busqueda, productosFiltrados }
+    return { busqueda, productosFiltrados, carrito }
   }
 }
 </script>
@@ -58,5 +72,23 @@ export default {
 .card-producto { background: white; padding: 20px; border-radius: 8px; border: 1px solid #ddd; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; flex-direction: column; justify-content: space-between; }
 .precio { font-size: 20px; font-weight: bold; color: #28a745; margin: 10px 0; }
 .stock { font-size: 14px; color: #777; margin-bottom: 15px; }
+
+/* Estilos para el nuevo botón de agregar */
+.btn-agregar {
+  background: #2ecc71;
+  color: white;
+  border: none;
+  padding: 10px;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-bottom: 8px;
+  transition: background 0.2s;
+}
+.btn-agregar:hover {
+  background: #27ae60;
+}
+
 .btn-detalle { display: block; text-align: center; background: #007bff; color: white; padding: 8px; text-decoration: none; border-radius: 4px; font-weight: bold; }
+.btn-detalle:hover { background: #0056b3; }
 </style>

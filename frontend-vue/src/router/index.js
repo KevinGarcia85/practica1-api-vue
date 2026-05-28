@@ -1,12 +1,15 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
+import { useAuthStore } from '../stores/auth'
+
 import HomeView from '../views/HomeView.vue'
 import CatalogoView from '../views/CatalogoView.vue'
 import ProductoDetalle from '../views/ProductoDetalle.vue'
 import LoginView from '../views/LoginView.vue'
 import RegisterView from '../views/RegisterView.vue'
 import AdminLayout from '../views/admin/AdminLayout.vue'
-import DashboardView from '../views/DashboardView.vue' 
+import DashboardView from '../views/DashboardView.vue'
+// 1. IMPORTA LA NUEVA VISTA DEL CARRITO
+import CartView from '../views/CartView.vue' 
 
 const routes = [
   { path: '/', name: 'home', component: HomeView },
@@ -14,6 +17,10 @@ const routes = [
   { path: '/catalogo/:id', name: 'producto-detalle', component: ProductoDetalle, props: true },
   { path: '/login', name: 'login', component: LoginView },
   { path: '/register', name: 'register', component: RegisterView },
+  
+  // 2. AGREGA LA RUTA PÚBLICA DEL CARRITO AQUÍ
+  { path: '/carrito', name: 'carrito', component: CartView }, 
+  
   {
     path: '/admin',
     component: AdminLayout,
@@ -30,11 +37,9 @@ const router = createRouter({
   routes
 })
 
-// GUARD GLOBAL DEFINITIVO CORREGIDO
 router.beforeEach(async (to, from, next) => {
   const auth = useAuthStore()
 
-  // Inicializar usuario si hay token guardado
   if (auth.token && !auth.user) {
     try {
       await auth.fetchUser()

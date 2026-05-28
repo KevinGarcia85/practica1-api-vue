@@ -7,6 +7,16 @@
         <div class="enlaces">
           <router-link to="/">Inicio</router-link>
           <router-link to="/catalogo">Catálogo</router-link>
+          
+          <!-- ÍCONO DEL CARRITO (Inyectado directamente aquí) -->
+          <router-link to="/carrito" class="cart-link">
+            <span class="cart-icon">🛒
+              <span v-if="carrito.totalItems > 0" class="badge">
+                {{ carrito.totalItems }}
+              </span>
+            </span>
+          </router-link>
+          
           <router-link to="/login" class="btn-admin-nav">Panel Admin</router-link>
         </div>
       </div>
@@ -22,13 +32,15 @@
 <script>
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
+import { useCarritoStore } from './stores/carrito' // Importamos el store que ya funciona
 
 export default {
   setup() {
     const route = useRoute()
+    const carrito = useCarritoStore() // Conectamos el carrito directamente aquí
     const esRutaAdmin = computed(() => route.path.startsWith('/admin'))
 
-    return { esRutaAdmin }
+    return { esRutaAdmin, carrito }
   }
 }
 </script>
@@ -60,7 +72,11 @@ body {
   color: #2c3e50;
   text-decoration: none;
 }
-.enlaces a {
+.enlaces {
+  display: flex;
+  align-items: center;
+}
+.enlaces a, .enlaces .cart-link {
   color: #5a6c7d;
   text-decoration: none;
   font-weight: 600;
@@ -76,7 +92,33 @@ body {
   background-color: #2c3e50;
   color: #fff !important;
 }
+.enlaces .btn-admin-nav:hover {
+  background-color: #34495e;
+}
 .contenido-principal {
   padding: 10px 0;
+}
+
+/* Estilos del ícono del carrito */
+.cart-link {
+  text-decoration: none;
+  display: inline-block;
+}
+.cart-icon {
+  font-size: 22px;
+  position: relative;
+  cursor: pointer;
+}
+.badge {
+  background-color: #e74c3c;
+  color: white;
+  font-size: 11px;
+  font-weight: bold;
+  border-radius: 50%;
+  padding: 2px 6px;
+  position: absolute;
+  top: -8px;
+  right: -10px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 </style>
