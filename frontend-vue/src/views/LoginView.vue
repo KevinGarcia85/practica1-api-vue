@@ -1,22 +1,45 @@
 <template>
-  <div class="auth-container">
-    <div class="auth-card">
-      <h2>Iniciar Sesión</h2>
-      <div v-if="error" class="alert alert-danger">{{ error }}</div>
+  <div class="login-container">
+    <div class="login-card">
+      <h2>🔐 Iniciar Sesión</h2>
+      <p class="subtitle">Ingresa al panel administrativo de la tienda</p>
+      
+      <!-- Mensaje de error si falla el Login -->
+      <div v-if="error" class="alert-error">
+        ⚠️ {{ error }}
+      </div>
+
       <form @submit.prevent="handleLogin">
         <div class="form-group">
-          <label>Correo Electrónico:</label>
-          <input type="email" v-model="form.email" required placeholder="ejemplo@correo.com" />
+          <label for="email">Correo Electrónico</label>
+          <input 
+            type="email" 
+            id="email" 
+            v-model="form.email" 
+            placeholder="ejemplo@correo.com" 
+            required 
+          />
         </div>
+
         <div class="form-group">
-          <label>Contraseña:</label>
-          <input type="password" v-model="form.password" required />
+          <label for="password">Contraseña</label>
+          <input 
+            type="password" 
+            id="password" 
+            v-model="form.password" 
+            placeholder="••••••••" 
+            required 
+          />
         </div>
-        <button type="submit" class="btn btn-primary" :disabled="loading">
-          {{ loading ? 'Ingresando...' : 'Entrar' }}
+
+        <button type="submit" :disabled="loading" class="btn-login">
+          {{ loading ? 'Autenticando...' : 'Ingresar al Panel' }}
         </button>
       </form>
-      <p>¿No tienes cuenta? <router-link to="/register">Regístrate aquí</router-link></p>
+      
+      <div class="login-footer">
+        <p>¿No tienes una cuenta? <router-link to="/register">Regístrate aquí</router-link></p>
+      </div>
     </div>
   </div>
 </template>
@@ -24,13 +47,18 @@
 <script>
 import { ref } from 'vue'
 import { useAuthStore } from '../stores/auth'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 
 export default {
   setup() {
     const auth = useAuthStore()
     const router = useRouter()
-    const form = ref({ email: '', password: '' })
+    const route = useRoute()
+    
+    const form = ref({ 
+      email: '', 
+      password: '' 
+    })
     const error = ref(null)
     const loading = ref(false)
 
@@ -39,7 +67,10 @@ export default {
       error.value = null
       try {
         await auth.login(form.value)
-        router.push('/dashboard')
+        
+        // Redirección inteligente post-login según la guía de Practica03_Vue_Router_SPA.docx
+        const redirectTo = route.query.redirect || '/admin'
+        router.push(redirectTo)
       } catch (err) {
         error.value = err
       } finally {
@@ -53,13 +84,95 @@ export default {
 </script>
 
 <style scoped>
-.auth-container { display: flex; justify-content: center; align-items: center; min-height: 80vh; font-family: Arial, sans-serif; }
-.auth-card { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); width: 100%; max-width: 400px; color: #333; }
-.form-group { margin-bottom: 15px; }
-.form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
-.form-group input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-.btn { width: 100%; padding: 10px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; color: white; background: #007bff; margin-top: 10px; }
-.btn:disabled { background: #cccccc; }
-.alert-danger { background: #f8d7da; color: #721c24; padding: 10px; border-radius: 4px; margin-bottom: 15px; text-align: center; font-size: 14px; }
-p { text-align: center; margin-top: 15px; font-size: 14px; }
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 70vh;
+  padding: 20px;
+}
+.login-card {
+  background: white;
+  padding: 35px;
+  border-radius: 10px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+  width: 100%;
+  max-width: 400px;
+}
+h2 {
+  margin: 0 0 5px 0;
+  color: #2c3e50;
+  text-align: center;
+}
+.subtitle {
+  color: #7f8c8d;
+  font-size: 14px;
+  text-align: center;
+  margin-bottom: 25px;
+}
+.form-group {
+  margin-bottom: 20px;
+}
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #34495e;
+  font-size: 14px;
+}
+.form-group input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 15px;
+  box-sizing: border-box;
+}
+.form-group input:focus {
+  border-color: #3498db;
+  outline: none;
+}
+.btn-login {
+  background: #3498db;
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: 6px;
+  font-weight: bold;
+  font-size: 16px;
+  cursor: pointer;
+  width: 100%;
+  margin-top: 10px;
+  transition: background 0.2s;
+}
+.btn-login:hover {
+  background: #2980b9;
+}
+.btn-login:disabled {
+  background: #bdc3c7;
+  cursor: not-allowed;
+}
+.alert-error {
+  background-color: #f8d7da;
+  color: #721c24;
+  padding: 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  margin-bottom: 20px;
+  border: 1px solid #f5c6cb;
+}
+.login-footer {
+  margin-top: 25px;
+  text-align: center;
+  font-size: 14px;
+  color: #7f8c8d;
+}
+.login-footer a {
+  color: #3498db;
+  text-decoration: none;
+  font-weight: bold;
+}
+.login-footer a:hover {
+  text-decoration: underline;
+}
 </style>
