@@ -4,31 +4,27 @@ namespace App\Http\Controllers;
 
 use App\Models\Producto;
 use Illuminate\Http\Request;
+use App\Http\Requests\StoreProductoRequest;
+use App\Http\Requests\UpdateProductoRequest;
+
 
 class ProductoController extends Controller
 {
-    // READ (Todos los productos)
+    // Listar todos los productos
     public function index()
     {
-        $productos = Producto::all();
-        return response()->json($productos, 200);
+        return response()->json(Producto::all(), 200);
     }
 
-    // CREATE
-    public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'nombre' => 'required|string|max:255',
-            'descripcion' => 'nullable|string',
-            'precio' => 'required|numeric|min:0',
-            'stock' => 'required|integer|min:0',
-        ]);
+// Cambia Request por StoreProductoRequest
+public function store(StoreProductoRequest $request)
+{
+    // Laravel ya validó de forma automática aquí. Si falla, enviará el error 422.
+    $producto = Producto::create($request->validated());
+    return response()->json($producto, 201);
+}
 
-        $producto = Producto::create($validated);
-        return response()->json($producto, 201);
-    }
-
-    // READ (Un solo producto)
+    // Mostrar un producto individual
     public function show($id)
     {
         $producto = Producto::find($id);
@@ -38,26 +34,20 @@ class ProductoController extends Controller
         return response()->json($producto, 200);
     }
 
-    // UPDATE
-    public function update(Request $request, $id)
-    {
-        $producto = Producto::find($id);
-        if (!$producto) {
-            return response()->json(['message' => 'Producto no encontrado'], 404);
-        }
-
-        $validated = $request->validate([
-            'nombre' => 'required|string|max:255',
-            'descripcion' => 'nullable|string',
-            'precio' => 'required|numeric|min:0',
-            'stock' => 'required|integer|min:0',
-        ]);
-
-        $producto->update($validated);
-        return response()->json($producto, 200);
+    // Actualizar un producto existente
+// Cambia Request por UpdateProductoRequest
+public function update(UpdateProductoRequest $request, $id)
+{
+    $producto = Producto::find($id);
+    if (!$producto) {
+        return response()->json(['message' => 'Producto no encontrado'], 404);
     }
 
-    // DELETE
+    $producto->update($request->validated());
+    return response()->json($producto, 200);
+}
+
+    // Eliminar un producto
     public function destroy($id)
     {
         $producto = Producto::find($id);
@@ -66,6 +56,7 @@ class ProductoController extends Controller
         }
 
         $producto->delete();
-        return response()->json(null, 204);
+
+        return response()->json(['message' => 'Producto eliminado correctamente'], 200);
     }
 }

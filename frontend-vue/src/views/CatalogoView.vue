@@ -1,94 +1,114 @@
 <template>
-  <div class="page">
-    <h2>Catálogo de Productos</h2>
-    
-    <div class="search-box">
-      <input type="text" v-model="busqueda" placeholder="🔍 Buscar producto por nombre..." />
-    </div>
+  <div class="catalogo-layout">
+    <!-- Barra Lateral Exclusiva para los Filtros -->
+    <aside class="sidebar-filtros">
+      <FiltrosPanel :filtros="filtros" @limpiar="limpiarFiltros" />
+    </aside>
 
-    <div class="grid">
-      <div v-for="p in productosFiltrados" :key="p.id" class="card-producto">
-        <h3>{{ p.nombre }}</h3>
-        <p class="precio">${{ p.precio }}</p>
-        <p class="stock">Disponibles: {{ p.stock }} pzas</p>
-        
-        <button @click="carrito.agregar(p)" class="btn-agregar">
-          <template v-if="carrito.cantidadDeProducto(p.id) > 0">
-            🛒 En carrito ({{ carrito.cantidadDeProducto(p.id) }})
-          </template>
-          <template v-else>
-            ➕ Agregar al carrito
-          </template>
-        </button>
+    <!-- Espacio del Listado de Tarjetas -->
+    <section class="main-catalogo">
+      <h1 class="titulo-catalogo">Catálogo Profesional Full-Stack</h1>
 
-        <router-link :to="'/catalogo/' + p.id" class="btn-detalle">Ver Detalles</router-link>
+      <!-- Animación Spinner de Espera -->
+      <div v-if="cargando" class="loading-state">
+        <p>🔄 Buscando y organizando los mejores resultados...</p>
       </div>
-      
-      <p v-if="productosFiltrados.length === 0" style="grid-column: 1/-1;">
-        No se encontraron productos que coincidan.
-      </p>
-    </div>
+
+      <!-- Cuadrícula de Contenidos -->
+      <div v-else-if="resultado.data && resultado.data.length > 0">
+        <div class="grid-productos">
+          <div v-for="producto in resultado.data" :key="producto.id" class="producto-card">
+            <div class="img-wrapper">
+              <!-- Renderiza la propiedad 'imagen' corregida de la base de datos -->
+              <img :src="producto.imagen || 'https://via.placeholder.com/150'" class="img-item" />
+            </div>
+            <div class="card-body">
+              <span class="badge-cat" v-if="producto.categoria">{{ producto.categoria.nombre }}</span>
+              <h3 class="prod-title">{{ producto.nombre }}</h3>
+              <p class="prod-desc">{{ producto.descripcion }}</p>
+              <div class="prod-meta">
+                <span class="prod-price">${{ producto.precio }}</span>
+                <span class="prod-stock">Stock: {{ producto.stock }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Barra de Navegación de Paginación -->
+        <PaginacionNav :meta="resultado.meta" @cambio-pagina="filtros.pagina = $event" />
+      </div>
+
+      <!-- Estado Vacío -->
+      <div v-else class="empty-state">
+        <p>📭 No hay coincidencias que cumplan con los filtros aplicados.</p>
+      </div>
+    </section>
   </div>
 </template>
 
-<script>
-import { ref, onMounted, computed } from 'vue'
-import axios from 'axios'
-import { useCarritoStore } from '../stores/carrito' // Importamos el store del carrito
+<script setup>
+import { ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
+import axios from 'axios' // Importación corregida estándar
+import { useFiltros } from '../composables/useFiltros'
+import FiltrosPanel from '../components/FiltrosPanel.vue'
+import PaginacionNav from '../components/PaginacionNav.vue'
 
-export default {
-  setup() {
-    const productos = ref([])
-    const busqueda = ref('')
-    const carrito = useCarritoStore() // Activamos el store para usar sus acciones y getters
+const route = useRoute()
+const { filtros, limpiarFiltros } = useFiltros()
 
-    const cargarProductos = async () => {
-      try {
-        const res = await axios.get('http://localhost:8000/api/productos')
-        productos.value = res.data
-      } catch (err) {
-        console.error("Error al traer el catálogo", err)
+const resultado = ref({ data: [], meta: {} })
+const cargando = ref(false)
+
+const cargarProductos = async () => {
+  cargando.value = true
+  try {
+    const { data } = await axios.get('http://localhost:8000/api/productos', {
+      params: {
+        busqueda:     filtros.busqueda,
+        categoria_id: filtros.categoria_id,
+        precio_min:   filtros.precio_min,
+        precio_max:   filtros.precio_max,
+        orden:        filtros.orden,
+        page:         filtros.pagina,
       }
-    }
-
-    const productosFiltrados = computed(() => {
-      return productos.value.filter(p => 
-        p.nombre.toLowerCase().includes(busqueda.value.toLowerCase())
-      )
     })
-
-    onMounted(cargarProductos)
-
-    return { busqueda, productosFiltrados, carrito }
+    resultado.value = data
+  } catch (error) {
+    console.error("Fallo al comunicarse con la API de productos:", error)
+  } finally {
+    cargando.value = false
   }
 }
+
+// Escucha activa de los parámetros de la URL para disparar la recarga (Sincronización total)
+watch(() => route.query, () => {
+  // Asegura que los filtros internos reflejen lo que hay en la URL al recargar
+  filtros.busqueda = route.query.busqueda || ''
+  filtros.categoria_id = route.query.categoria || ''
+  filtros.precio_min = route.query.min || ''
+  filtros.precio_max = route.query.max || ''
+  filtros.orden = route.query.orden || 'nombre'
+  filtros.pagina = Number(route.query.p) || 1
+
+  cargarProductos()
+}, { immediate: true })
 </script>
 
 <style scoped>
-.page { font-family: Arial, sans-serif; max-width: 1000px; margin: 0 auto; padding: 20px; color: #333; }
-.search-box { margin-bottom: 30px; text-align: center; }
-.search-box input { width: 100%; max-width: 500px; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
-.card-producto { background: white; padding: 20px; border-radius: 8px; border: 1px solid #ddd; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; flex-direction: column; justify-content: space-between; }
-.precio { font-size: 20px; font-weight: bold; color: #28a745; margin: 10px 0; }
-.stock { font-size: 14px; color: #777; margin-bottom: 15px; }
-
-/* Estilos para el nuevo botón de agregar */
-.btn-agregar {
-  background: #2ecc71;
-  color: white;
-  border: none;
-  padding: 10px;
-  border-radius: 4px;
-  font-weight: bold;
-  cursor: pointer;
-  margin-bottom: 8px;
-  transition: background 0.2s;
-}
-.btn-agregar:hover {
-  background: #27ae60;
-}
-
-.btn-detalle { display: block; text-align: center; background: #007bff; color: white; padding: 8px; text-decoration: none; border-radius: 4px; font-weight: bold; }
-.btn-detalle:hover { background: #0056b3; }
+.catalogo-layout { display: grid; grid-template-columns: 280px 1fr; gap: 30px; padding: 30px; background-color: #f4f6f9; min-height: 100vh; font-family: sans-serif; }
+.sidebar-filtros { position: sticky; top: 20px; }
+.titulo-catalogo { text-align: left; margin-top: 0; color: #2c3e50; font-size: 24px; font-weight: bold; margin-bottom: 25px; }
+.loading-state, .empty-state { background: white; padding: 60px; text-align: center; border-radius: 8px; color: #666; box-shadow: 0 2px 10px rgba(0,0,0,0.02); }
+.grid-productos { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 20px; }
+.producto-card { background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.04); display: flex; flex-direction: column; }
+.img-wrapper { background: #f8f9fa; height: 150px; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid #f0f0f0; }
+.img-item { max-height: 100%; max-width: 100%; object-fit: cover; }
+.card-body { padding: 15px; text-align: left; display: flex; flex-direction: column; flex-grow: 1; }
+.badge-cat { display: inline-block; background: #e8f4fd; color: #3498db; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 10px; margin-bottom: 8px; width: fit-content; text-transform: uppercase; }
+.prod-title { font-size: 16px; color: #333; margin: 0 0 5px 0; font-weight: bold; }
+.prod-desc { font-size: 12px; color: #777; margin: 0 0 15px 0; flex-grow: 1; line-height: 1.4; }
+.prod-meta { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #f4f6f9; padding-top: 10px; }
+.prod-price { font-size: 18px; color: #2ecc71; font-weight: bold; }
+.prod-stock { font-size: 11px; color: #999; }
 </style>

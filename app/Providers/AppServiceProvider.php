@@ -2,23 +2,32 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\ServiceProvider;
+use App\Models\User;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 
-class AppServiceProvider extends ServiceProvider
+class AuthServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
-    public function register(): void
-    {
-        //
-    }
+    protected $policies = [
+        // Aquí mapearemos la Policy en el siguiente paso
+        \App\Models\Producto::class => \App\Policies\ProductoPolicy::class,
+    ];
 
-    /**
-     * Bootstrap any application services.
-     */
     public function boot(): void
     {
-        //
+        $this->registerPolicies();
+
+        // GATES GRANULARES
+        Gate::define('crear-producto', function (User $user) {
+            return $user->esAdmin() || $user->esEditor();
+        });
+
+        Gate::define('editar-producto', function (User $user) {
+            return $user->esAdmin() || $user->esEditor();
+        });
+
+        Gate::define('eliminar-producto', function (User $user) {
+            return $user->esAdmin(); // Únicamente los Administradores
+        });
     }
 }

@@ -1,75 +1,77 @@
 <template>
   <div class="auth-container">
     <div class="auth-card">
-      <h2>Registro de Usuario</h2>
-      <div v-if="errors" class="alert alert-danger">
-        <div v-for="(err, index) in errors" :key="index">{{ err[0] }}</div>
-      </div>
+      <h2>📝 Crear Cuenta</h2>
+      <p class="subtitle">Regístrate para obtener credenciales de acceso</p>
+      
       <form @submit.prevent="handleRegister">
         <div class="form-group">
-          <label>Nombre Completo:</label>
-          <input type="text" v-model="form.name" required />
+          <label>Nombre Completo</label>
+          <input v-model="form.name" type="text" required placeholder="Tu nombre" class="form-control" />
         </div>
+
         <div class="form-group">
-          <label>Correo Electrónico:</label>
-          <input type="email" v-model="form.email" required />
+          <label>Correo Electrónico</label>
+          <input v-model="form.email" type="email" required placeholder="correo@ejemplo.com" class="form-control" />
         </div>
+
         <div class="form-group">
-          <label>Contraseña:</label>
-          <input type="password" v-model="form.password" required />
+          <label>Contraseña</label>
+          <input v-model="form.password" type="password" required placeholder="Mínimo 6 caracteres" class="form-control" />
         </div>
-        <div class="form-group">
-          <label>Confirmar Contraseña:</label>
-          <input type="password" v-model="form.password_confirmation" required />
-        </div>
-        <button type="submit" class="btn btn-success" :disabled="loading">
-          {{ loading ? 'Registrando...' : 'Registrarse' }}
+
+        <button type="submit" class="btn-submit" :disabled="cargando">
+          {{ cargando ? 'Registrando...' : 'Crear Cuenta' }}
         </button>
       </form>
-      <p>¿Ya tienes cuenta? <router-link to="/login">Inicia sesión</router-link></p>
+
+      <p class="switch-auth">
+        ¿Ya tienes cuenta? <RouterLink to="/login">Inicia Sesión aquí</RouterLink>
+      </p>
     </div>
   </div>
 </template>
 
-<script>
-import { ref } from 'vue'
+<script setup>
+import { reactive, ref } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { useRouter } from 'vue-router'
 
-export default {
-  setup() {
-    const auth = useAuthStore()
-    const router = useRouter()
-    const form = ref({ name: '', email: '', password: '', password_confirmation: '' })
-    const errors = ref(null)
-    const loading = ref(false)
+const auth = useAuthStore()
+const router = useRouter()
+const cargando = ref(false)
 
-    const handleRegister = async () => {
-      loading.value = true
-      errors.value = null
-      try {
-        await auth.register(form.value)
-        router.push('/dashboard')
-      } catch (err) {
-        errors.value = typeof err === 'object' ? err : { general: [err] }
-      } finally {
-        loading.value = false
-      }
+const form = reactive({
+  name: '',
+  email: '',
+  password: ''
+})
+
+const handleRegister = async () => {
+  cargando.value = true
+  try {
+    const exito = await auth.register(form)
+    if (exito) {
+      alert("¡Registro exitoso! Ahora puedes iniciar sesión.")
+      router.push('/login')
     }
-
-    return { form, errors, loading, handleRegister }
+  } catch (error) {
+    alert("Error al registrar. Es posible que el correo ya esté en uso.")
+  } finally {
+    cargando.value = false
   }
 }
 </script>
 
 <style scoped>
-.auth-container { display: flex; justify-content: center; align-items: center; min-height: 80vh; font-family: Arial, sans-serif; }
-.auth-card { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); width: 100%; max-width: 400px; color: #333; }
-.form-group { margin-bottom: 15px; }
-.form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
-.form-group input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-.btn { width: 100%; padding: 10px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; color: white; background: #28a745; margin-top: 10px; }
-.btn:disabled { background: #cccccc; }
-.alert-danger { background: #f8d7da; color: #721c24; padding: 10px; border-radius: 4px; margin-bottom: 15px; font-size: 14px; }
-p { text-align: center; margin-top: 15px; font-size: 14px; }
+.auth-container { display: flex; align-items: center; justify-content: center; min-height: 80vh; background-color: #f4f6f9; font-family: sans-serif; }
+.auth-card { background: white; padding: 35px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); width: 100%; max-width: 400px; text-align: center; }
+.subtitle { color: #777; font-size: 14px; margin-bottom: 25px; }
+.form-group { margin-bottom: 20px; text-align: left; }
+label { display: block; font-weight: bold; margin-bottom: 6px; font-size: 13px; color: #444; }
+.form-control { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+.btn-submit { background-color: #2ecc71; color: white; border: none; padding: 12px; width: 100%; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 15px; margin-top: 10px; }
+.btn-submit:disabled { background-color: #95a5a6; }
+.switch-auth { margin-top: 20px; font-size: 13px; color: #555; }
+.switch-auth a { color: #3498db; text-decoration: none; font-weight: bold; }
 </style>

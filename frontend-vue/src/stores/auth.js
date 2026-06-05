@@ -5,64 +5,57 @@ export const useAuthStore = defineStore('auth', {
   state: () => ({
     user: null,
     token: localStorage.getItem('token') || null,
+    permisos: {
+      crear: false,
+      editar: false,
+      eliminar: false
+    }
   }),
   getters: {
-    isAuthenticated: (state) => !!state.token,
+    estaAutenticado: (state) => !!state.token,
   },
   actions: {
-    // 1. Iniciar Sesión
-    async login(credentials) {
-      try {
-        const response = await axios.post('http://localhost:8000/api/login', credentials)
-        this.token = response.data.token
-        this.user = response.data.user
-        localStorage.setItem('token', this.token)
-      } catch (error) {
-        throw error.response?.data?.message || 'Error al iniciar sesión'
-      }
-    },
-
-    // 2. Registrar Usuario
-    async register(data) {
-      try {
-        const response = await axios.post('http://localhost:8000/api/register', data)
-        this.token = response.data.token
-        this.user = response.data.user
-        localStorage.setItem('token', this.token)
-      } catch (error) {
-        throw error.response?.data?.message || 'Error en el registro'
-      }
-    },
-
-    // 3. Recuperar perfil del usuario activo (LA QUE FALTABA)
     async fetchUser() {
       if (!this.token) return
       try {
-        const response = await axios.get('http://localhost:8000/api/me', {
-          headers: { Authorization: `Bearer ${this.token}` }
-        })
-        this.user = response.data
+        axios.defaults.headers.common['Authorization'] = `Bearer ${this.token}`
+        const { data } = await axios.get('http://localhost:8000/api/user')
+        
+        this.user = data.user || null
+        this.permisos = data.permisos || { crear: false, editar: false, eliminar: false }
       } catch (error) {
-        // Si el token es inválido o expiró, limpiamos todo
+        console.error("Error al obtener usuario:", error)
         this.logout()
       }
     },
-
-    // 4. Cerrar Sesión
-    async logout() {
+    async login(credenciales) {
       try {
-        if (this.token) {
-          await axios.post('http://localhost:8000/api/logout', {}, {
-            headers: { Authorization: `Bearer ${this.token}` }
-          })
-        }
+        const { data } = await axios.post('http://localhost:8000/api/login', credenciales)
+        this.token = data.token
+        localStorage.setItem('token', data.token)
+        axios.defaults.headers.common['Authorization'] = `Bearer ${data.token}`
+        await this.fetchUser()
+        return true
       } catch (error) {
-        console.error("Error al revocar token en servidor", error)
-      } finally {
-        this.token = null
-        this.user = null
-        localStorage.removeItem('token')
+        console.error("Error en login:", error)
+        throw error
       }
+    },
+    async register(datosUsuario) {
+      try {
+        await axios.post('http://localhost:8000/api/register', datosUsuario)
+        return true
+      } catch (error) {
+        console.error("Error en registro:", error)
+        throw error
+      }
+    },
+    logout() {
+      this.user = null
+      this.token = null
+      this.permisos = { crear: false, editar: false, eliminar: false }
+      localStorage.removeItem('token')
+      delete axios.defaults.headers.common['Authorization']
     }
   }
 })
