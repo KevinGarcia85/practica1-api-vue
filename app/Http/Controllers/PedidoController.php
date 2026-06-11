@@ -2,26 +2,39 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Pedido;
+use App\Jobs\EnviarCorreoPedidoJob;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 
 class PedidoController extends Controller
 {
+    // Crear pedido y despachar la tarea en segundo plano
     public function store(Request $request)
     {
-        // Validamos que lleguen los productos del carrito
-        $request->validate([
-            'items' => 'required|array',
+        $validated = $request->validate([
+            'cliente_email' => 'required|email',
+            'total'         => 'required|numeric'
         ]);
 
-        // Simulación o guardado en Base de Datos:
-        // Aquí puedes procesar el pedido o registrarlo en logs para verificar que llegó
-        Log::info('Pedido recibido con éxito:', $request->all());
+        $pedido = Pedido::create($validated);
+
+        // Despachar el Job a la cola
+        EnviarCorreoPedidoJob::dispatch($pedido);
 
         return response()->json([
-            'status' => 'success',
-            'message' => '¡Pedido registrado correctamente en Laravel!',
-            'items_recibidos' => count($request->items)
+            'message' => 'Pedido registrado. Procesando notificación en cola...',
+            'pedido'  => $pedido
         ], 201);
+    }
+
+    // Consultar el estado del pedido (Polling)
+    public function show($id)
+    {
+        $pedido = Pedido::find($id);
+        if (!$pedido) {
+            return response()->json(['message' => 'Pedido no encontrado'], 404);
+        }
+
+        return response()->json($pedido, 200);
     }
 }
